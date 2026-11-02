@@ -1,0 +1,35 @@
+name: Build sc radio APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack project.zip
+        run: |
+          if [ -f project.zip ]; then unzip -o project.zip -d . ; fi
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.5'
+      - name: Build release APK
+        run: |
+          set -o pipefail
+          gradle assembleRelease --no-daemon --console=plain 2>&1 | tee build.log
+      - name: Show errors only
+        if: failure()
+        run: |
+          echo "=== ERRORS ==="
+          grep -E "^e: |What went wrong|error:|AAPT|Execution failed" -A4 build.log | head -40
+      - name: Name the APK
+        run: cp app/build/outputs/apk/release/app-release.apk sc-radio.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sc-radio-apk
+          path: sc-radio.apk
+          
